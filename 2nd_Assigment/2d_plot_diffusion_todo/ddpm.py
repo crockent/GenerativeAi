@@ -86,7 +86,7 @@ class DiffusionModule(nn.Module):
         ######## TODO ########
         # Assignment -- Compute xt.
         alphas_prod_t = extract(self.var_scheduler.alphas_cumprod, t, x0)
-        xt = x0
+        xt = torch.sqrt(alphas_prod_t) * x0 + torch.sqrt(1.00 - alphas_prod_t) * noise
 
         #######################
 
@@ -113,8 +113,12 @@ class DiffusionModule(nn.Module):
         ).sqrt()
         eps_theta = self.network(xt, t)
 
-        x_t_prev = xt
-
+        alpha_t = extract(self.var_scheduler.alphas, t, xt)
+        sqrt_recip_alpha_t = (1.0 / alpha_t).sqrt()
+        mean = sqrt_recip_alpha_t * (xt - eps_factor * eps_theta)
+        post_var = extract(self.var_scheduler.post_variance, t, xt)
+        noise = torch.randn_like(xt)
+        x_t_prev = mean + [(t != 0).float().view(-1, *([1] * (xt.dim() - 1)))] * torch.sqrt(posterior_var) * noise
         #######################
         return x_t_prev
 

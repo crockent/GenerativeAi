@@ -83,7 +83,18 @@ class SimpleNet(nn.Module):
 
         ######## TODO ########
         # Assignment -- implement the denoiser model
+      
+        layers = []
+        all_dims = [dim_in] + dim_hids + [dim_out] #creating a list with all dimensions
+        
+        for i in range(len(all_dims) - 1):
+            layers.append(TimeLinear(all_dims[i], all_dims[i + 1], num_timesteps)) #adding TimeLinear layers to the list without ReLu activation
 
+            if i < len(all_dims) - 2:  # Not the last layer
+                layers.append(nn.ReLU()) # adding the Relu Activation to each layer
+
+        self.layers = nn.ModuleList(layers)
+        
         ######################
         
     def forward(self, x: torch.Tensor, t: torch.Tensor):
@@ -97,6 +108,16 @@ class SimpleNet(nn.Module):
         """
         ######## TODO ########
         # Assignment -- implement the forward pass of the denoiser
-
+        
+        # Process input through all layers
+        for layer in self.layers:
+            if isinstance(layer, TimeLinear):
+                # TimeLinear layers need both x and t
+                x = layer(x, t)
+            else:
+                # ReLU layers only need x
+                x = layer(x)
+        
         ######################
         return x
+
